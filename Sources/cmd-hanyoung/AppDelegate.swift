@@ -1,10 +1,13 @@
-// 앱 델리게이트 — 상태바 아이콘 및 메뉴 구성
+// 앱 델리게이트 — 상태바 아이콘, 메뉴 구성, TapMonitor 시작
 import Cocoa
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // 상태바 항목 (앱 생명주기 동안 강한 참조 유지)
     var statusItem: NSStatusItem!
+
+    // CGEventTap 래퍼 — 솔로탭 감지
+    private let tapMonitor = TapMonitor()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // 시스템 상태바에 가변 길이 항목 생성
@@ -39,6 +42,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 메뉴 연결
         statusItem.menu = menu
+
+        // TapMonitor 시작 — 솔로탭 감지 (S2 슬라이스: 로그만, 실제 전환은 S3)
+        tapMonitor.onLeft  = { NSLog("[cmd-hanyoung] left tap → force English (S2 stub)") }
+        tapMonitor.onRight = { NSLog("[cmd-hanyoung] right tap → force Korean (S2 stub)") }
+        tapMonitor.start()
     }
 
     // 앱 종료
