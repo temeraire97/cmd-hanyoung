@@ -35,10 +35,16 @@ let package = Package(
             name: "cmd-hanyoungTests",
             dependencies: ["SoloTapDetectorCore"],
             path: "Tests/cmd-hanyoungTests",
+            swiftSettings: [
+                .unsafeFlags([
+                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
+                ])
+            ],
             linkerSettings: [
                 .unsafeFlags([
                     "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
                     "-framework", "Testing",
+                    "-framework", "_Testing_Foundation",
                     "-Xlinker", "-rpath",
                     "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
                 ])
