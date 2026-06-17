@@ -93,8 +93,10 @@ final class TapMonitor {
             )
             if let tap = detector.handle(modifier: evt) {
                 switch tap {
-                case .left:  onLeft?()
-                case .right: onRight?()
+                case .left:
+                    DispatchQueue.main.async { [weak self] in self?.onLeft?() }
+                case .right:
+                    DispatchQueue.main.async { [weak self] in self?.onRight?() }
                 }
             }
 
@@ -138,9 +140,15 @@ final class TapMonitor {
 
 private extension UInt64 {
     func toTimeInterval() -> TimeInterval {
-        var info = mach_timebase_info_data_t()
-        mach_timebase_info(&info)
-        let nanos = self * UInt64(info.numer) / UInt64(info.denom)
+        let nanos = self * UInt64(MachTimebaseInfo.shared.numer) / UInt64(MachTimebaseInfo.shared.denom)
         return TimeInterval(nanos) / 1_000_000_000
     }
+}
+
+private enum MachTimebaseInfo {
+    static let shared: mach_timebase_info_data_t = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return info
+    }()
 }
