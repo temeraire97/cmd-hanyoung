@@ -9,9 +9,15 @@ let package = Package(
         .macOS(.v14)
     ],
     targets: [
+        // 순수 로직 라이브러리 — CGEventTap 의존 없음, 테스트 가능
+        .target(
+            name: "SoloTapDetectorCore",
+            path: "Sources/SoloTapDetectorCore"
+        ),
         // 메인 실행 타겟
         .executableTarget(
             name: "cmd-hanyoung",
+            dependencies: ["SoloTapDetectorCore"],
             path: "Sources/cmd-hanyoung",
             linkerSettings: [
                 // Cocoa UI 프레임워크
@@ -24,11 +30,19 @@ let package = Package(
                 .linkedFramework("ApplicationServices"),
             ]
         ),
-        // 테스트 타겟 (이후 슬라이스에서 실제 테스트 추가)
+        // 테스트 타겟 — Swift Testing 사용
         .testTarget(
             name: "cmd-hanyoungTests",
-            dependencies: [],
-            path: "Tests/cmd-hanyoungTests"
+            dependencies: ["SoloTapDetectorCore"],
+            path: "Tests/cmd-hanyoungTests",
+            linkerSettings: [
+                .unsafeFlags([
+                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
+                    "-framework", "Testing",
+                    "-Xlinker", "-rpath",
+                    "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
+                ])
+            ]
         ),
     ]
 )

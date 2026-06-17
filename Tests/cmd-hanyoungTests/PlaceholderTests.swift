@@ -1,8 +1,8 @@
-// 플레이스홀더 테스트 — 이후 슬라이스에서 실제 테스트로 교체
-import XCTest
+// 플레이스홀더 테스트 — Swift Testing 사용
+import Testing
 
-final class PlaceholderTests: XCTestCase {
-    func testPlaceholder() {
-        XCTAssertTrue(true)
+@Suite struct PlaceholderTests {
+    @Test func placeholder() {
+        #expect(true)
     }
 }
