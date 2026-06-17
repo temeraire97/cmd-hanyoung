@@ -48,4 +48,14 @@ import Testing
         )
         #expect(result == true)
     }
+
+    // MARK: - Behavior 6: needsSwitch — currentID nil → true (현재 소스 불명 → 전환 시도)
+
+    @Test func needsSwitch_nilCurrentID_returnsTrue() {
+        let result = InputSourceClassifier.needsSwitch(
+            targetID: "com.apple.keylayout.ABC",
+            currentID: nil
+        )
+        #expect(result == true)
+    }
 }
