@@ -58,4 +58,28 @@ import Testing
         )
         #expect(result == true)
     }
+
+    // MARK: - Behavior 7: isKeyboardCategory — keyboard category 문자열 → true
+
+    @Test func isKeyboardCategory_keyboardCategory_returnsTrue() {
+        let result = InputSourceClassifier.isKeyboardCategory(
+            InputSourceClassifier.categoryKeyboardInputSource
+        )
+        #expect(result == true)
+    }
+
+    // MARK: - Behavior 8: isKeyboardCategory — 팔레트 계열 category → false
+
+    @Test func isKeyboardCategory_paletteCategory_returnsFalse() {
+        // TISCategoryPaletteInputSource 는 키보드 소스가 아님
+        let result = InputSourceClassifier.isKeyboardCategory("TISCategoryPaletteInputSource")
+        #expect(result == false)
+    }
+
+    // MARK: - Behavior 9: isKeyboardCategory — nil category → false
+
+    @Test func isKeyboardCategory_nilCategory_returnsFalse() {
+        let result = InputSourceClassifier.isKeyboardCategory(nil)
+        #expect(result == false)
+    }
 }
