@@ -1,66 +1,80 @@
-// 앱 델리게이트 — 상태바 아이콘, 메뉴 구성, TapMonitor 시작
+// 앱 델리게이트 — PreferenceStore, StatusBarController, TapMonitor 조율
 import Cocoa
+import SoloTapDetectorCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    // 상태바 항목 (앱 생명주기 동안 강한 참조 유지)
-    var statusItem: NSStatusItem!
+    // MARK: - 설정 저장소 (앱 생명주기 동안 강한 참조)
+    private let preferenceStore = PreferenceStore()
 
-    // CGEventTap 래퍼 — 솔로탭 감지
+    // MARK: - 상태바 컨트롤러
+    private var statusBarController: StatusBarController!
+
+    // MARK: - CGEventTap 래퍼 — 솔로탭 감지
     private let tapMonitor = TapMonitor()
 
+    // MARK: - 폴백 입력소스 ID 상수
+
+    private static let abcFallback    = "com.apple.keylayout.ABC"
+    private static let koreanFallback = "com.apple.inputmethod.Korean.2SetKorean"
+
+    // MARK: - 앱 시작
+
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 시스템 상태바에 가변 길이 항목 생성
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // 첫 실행 시 기본값 초기화
+        initializeDefaultsIfNeeded()
 
-        // 상태바 버튼 아이콘 설정
-        if let button = statusItem.button {
-            if let globeImage = NSImage(systemSymbolName: "globe", accessibilityDescription: "cmd-hanyoung") {
-                // SF Symbol 사용 가능한 경우 globe 아이콘 설정
-                button.image = globeImage
-            } else {
-                // SF Symbol 사용 불가 시 텍스트 폴백
-                button.title = "⌘한"
-            }
+        // 상태바 컨트롤러 생성 및 설정
+        statusBarController = StatusBarController(preferenceStore: preferenceStore)
+        statusBarController.onLeftCmdSourceChanged = { [weak self] _ in
+            self?.updateTapMonitorCallbacks()
         }
-
-        // 상태바 메뉴 구성
-        let menu = NSMenu()
-
-        // 비활성 타이틀 항목 (클릭 불가)
-        let titleItem = NSMenuItem(title: "cmd-hanyoung", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        menu.addItem(titleItem)
-
-        // 구분선
-        menu.addItem(NSMenuItem.separator())
-
-        // 종료 항목 — target을 self로 명시 (상태바 메뉴는 responder chain 보장 안 됨)
-        let quitItem = NSMenuItem(title: "종료", action: #selector(quit), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-
-        // 메뉴 연결
-        statusItem.menu = menu
-
-        // TapMonitor 시작 — 솔로탭 감지 (S3: 실제 입력소스 전환 연결)
-        // TODO(S5): 영문/한글 sourceID는 PreferenceStore에서 사용자 설정으로 교체 예정
-        let englishID = "com.apple.keylayout.ABC"
-        let koreanID  = "com.apple.inputmethod.Korean.2SetKorean"
-
-        tapMonitor.onLeft = {
-            NSLog("[cmd-hanyoung] left tap → force English: %@", englishID)
-            InputSource.forceEnglish(sourceID: englishID)
+        statusBarController.onRightCmdSourceChanged = { [weak self] _ in
+            self?.updateTapMonitorCallbacks()
         }
-        tapMonitor.onRight = {
-            NSLog("[cmd-hanyoung] right tap → force Korean: %@", koreanID)
-            InputSource.forceKorean(sourceID: koreanID)
-        }
+        statusBarController.setup()
+
+        // TapMonitor 콜백 초기 설정 후 시작
+        updateTapMonitorCallbacks()
         tapMonitor.start()
     }
 
-    // 앱 종료
-    @objc func quit() {
-        NSApplication.shared.terminate(nil)
+    // MARK: - 기본값 초기화
+
+    /// 첫 실행이거나 저장된 ID가 사용 불가 목록이 된 경우 resolveSourceID로 재설정한다.
+    private func initializeDefaultsIfNeeded() {
+        let availableIDs = InputSource.enumerate().map(\.id)
+
+        if preferenceStore.leftCmdSourceID == nil {
+            preferenceStore.leftCmdSourceID = SourceIDResolver.resolveSourceID(
+                stored: nil,
+                available: availableIDs,
+                fallback: Self.abcFallback
+            )
+        }
+
+        if preferenceStore.rightCmdSourceID == nil {
+            preferenceStore.rightCmdSourceID = SourceIDResolver.resolveSourceID(
+                stored: nil,
+                available: availableIDs,
+                fallback: Self.koreanFallback
+            )
+        }
+    }
+
+    // MARK: - TapMonitor 콜백 갱신
+
+    private func updateTapMonitorCallbacks() {
+        let leftID  = preferenceStore.leftCmdSourceID  ?? Self.abcFallback
+        let rightID = preferenceStore.rightCmdSourceID ?? Self.koreanFallback
+
+        tapMonitor.onLeft = {
+            NSLog("[cmd-hanyoung] left tap → force English: %@", leftID)
+            InputSource.forceEnglish(sourceID: leftID)
+        }
+        tapMonitor.onRight = {
+            NSLog("[cmd-hanyoung] right tap → force Korean: %@", rightID)
+            InputSource.forceKorean(sourceID: rightID)
+        }
     }
 }
