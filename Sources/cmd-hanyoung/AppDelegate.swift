@@ -1,5 +1,6 @@
 // 앱 델리게이트 — PreferenceStore, StatusBarController, TapMonitor 조율
 import Cocoa
+import ApplicationServices
 import SoloTapDetectorCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -12,6 +13,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - CGEventTap 래퍼 — 솔로탭 감지
     private let tapMonitor = TapMonitor()
+
+    // MARK: - 접근성 권한 재확인 타이머
+    private var accessibilityTimer: Timer?
 
     // MARK: - 폴백 입력소스 ID 상수
 
@@ -34,9 +38,63 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         statusBarController.setup()
 
-        // TapMonitor 콜백 초기 설정 후 시작
+        // TapMonitor 콜백 초기 설정
         updateTapMonitorCallbacks()
-        tapMonitor.start()
+
+        // 접근성 권한 확인 후 TapMonitor 시작
+        checkAccessibilityAndStart(promptIfNeeded: true)
+    }
+
+    // MARK: - 앱 활성화 시 재확인
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // 이미 신뢰 상태이면 무동작
+        guard !AXIsProcessTrusted() else { return }
+        checkAccessibilityAndStart(promptIfNeeded: false)
+    }
+
+    // MARK: - 접근성 권한 확인 및 TapMonitor 시작
+
+    /// 접근성 권한을 확인하고, 신뢰 여부에 따라 TapMonitor 시작 및 경고 갱신.
+    /// - Parameter promptIfNeeded: 미신뢰 시 시스템 프롬프트를 표시할지 여부
+    private func checkAccessibilityAndStart(promptIfNeeded: Bool) {
+        let trusted: Bool
+        if promptIfNeeded && !AXIsProcessTrusted() {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            trusted = AXIsProcessTrustedWithOptions(options)
+        } else {
+            trusted = AXIsProcessTrusted()
+        }
+
+        statusBarController.updateAccessibilityState(trusted: trusted)
+
+        if trusted {
+            // 권한 확보 — 타이머 중단, TapMonitor 시작(이미 실행 중이면 무동작)
+            stopAccessibilityTimer()
+            tapMonitor.start()
+        } else {
+            // 권한 미확보 — TapMonitor를 시작하지 않고 주기적으로 재확인
+            startAccessibilityTimerIfNeeded()
+        }
+    }
+
+    // MARK: - 접근성 재확인 타이머
+
+    private func startAccessibilityTimerIfNeeded() {
+        guard accessibilityTimer == nil else { return }
+        accessibilityTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if AXIsProcessTrusted() {
+                self.stopAccessibilityTimer()
+                self.statusBarController.updateAccessibilityState(trusted: true)
+                self.tapMonitor.start()
+            }
+        }
+    }
+
+    private func stopAccessibilityTimer() {
+        accessibilityTimer?.invalidate()
+        accessibilityTimer = nil
     }
 
     // MARK: - 기본값 초기화
