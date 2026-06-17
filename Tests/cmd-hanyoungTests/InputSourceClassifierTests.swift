@@ -23,4 +23,22 @@ import Testing
         )
         #expect(result == .cjkv)
     }
+
+    // MARK: - Behavior 3: needsSwitch — currentID == targetID → false (전환 불필요)
+
+    @Test func needsSwitch_sameID_returnsFalse() {
+        let sameID = "com.apple.keylayout.ABC"
+        let result = InputSourceClassifier.needsSwitch(targetID: sameID, currentID: sameID)
+        #expect(result == false)
+    }
+
+    // MARK: - Behavior 4: needsSwitch — currentID != targetID → true (전환 필요)
+
+    @Test func needsSwitch_differentID_returnsTrue() {
+        let result = InputSourceClassifier.needsSwitch(
+            targetID: "com.apple.inputmethod.Korean.2SetKorean",
+            currentID: "com.apple.keylayout.ABC"
+        )
+        #expect(result == true)
+    }
 }
