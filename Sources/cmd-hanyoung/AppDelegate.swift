@@ -17,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 접근성 권한 재확인 타이머
     private var accessibilityTimer: Timer?
 
+    // MARK: - 슬립/웨이크 복구 옵저버
+    private var wakeObserver: NSObjectProtocol?
+
     // MARK: - 폴백 입력소스 ID 상수
 
     private static let abcFallback    = "com.apple.keylayout.ABC"
@@ -43,6 +46,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         // 접근성 권한 확인 후 TapMonitor 시작
         checkAccessibilityAndStart(promptIfNeeded: true)
+
+        // 슬립 → 웨이크 시 CGEventTap 복구 (NFR-3)
+        registerWakeObserver()
+    }
+
+    // MARK: - 앱 종료 시 정리
+
+    func applicationWillTerminate(_ notification: Notification) {
+        removeWakeObserver()
     }
 
     // MARK: - 앱 활성화 시 재확인
@@ -117,6 +129,27 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 available: availableIDs,
                 fallback: Self.koreanFallback
             )
+        }
+    }
+
+    // MARK: - 슬립/웨이크 복구
+
+    private func registerWakeObserver() {
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            NSLog("[cmd-hanyoung] 시스템 웨이크 감지 — CGEventTap 재시작")
+            self.tapMonitor.restart()
+        }
+    }
+
+    private func removeWakeObserver() {
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
         }
     }
 
