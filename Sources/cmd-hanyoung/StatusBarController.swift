@@ -124,10 +124,11 @@ final class StatusBarController {
         statusItem.menu = menu
     }
 
-    /// 입력소스 목록 서브메뉴 생성
+    /// 입력소스 목록 서브메뉴 생성 (키보드 카테고리 소스만 표시)
     private func makeSourceSubmenu(currentID: String?, action: Selector) -> NSMenu {
         let submenu = NSMenu()
         let sources = InputSource.enumerate()
+            .filter { InputSourceClassifier.isKeyboardCategory($0.category) }
 
         for source in sources {
             let item = NSMenuItem(title: source.localizedName, action: action, keyEquivalent: "")
