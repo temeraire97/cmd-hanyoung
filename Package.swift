@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 // cmd-hanyoung 패키지 정의
 
 import PackageDescription
@@ -9,9 +9,15 @@ let package = Package(
         .macOS(.v14)
     ],
     targets: [
+        // 순수 로직 라이브러리 — CGEventTap 의존 없음, 테스트 가능
+        .target(
+            name: "SoloTapDetectorCore",
+            path: "Sources/SoloTapDetectorCore"
+        ),
         // 메인 실행 타겟
         .executableTarget(
             name: "cmd-hanyoung",
+            dependencies: ["SoloTapDetectorCore"],
             path: "Sources/cmd-hanyoung",
             linkerSettings: [
                 // Cocoa UI 프레임워크
@@ -24,11 +30,13 @@ let package = Package(
                 .linkedFramework("ApplicationServices"),
             ]
         ),
-        // 테스트 타겟 (이후 슬라이스에서 실제 테스트 추가)
+        // 테스트 타깃 — Swift Testing 사용
+        // CLT 환경에서는 Scripts/test.sh 사용 (Testing.framework 경로 주입)
         .testTarget(
             name: "cmd-hanyoungTests",
-            dependencies: [],
+            dependencies: ["SoloTapDetectorCore"],
             path: "Tests/cmd-hanyoungTests"
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )
