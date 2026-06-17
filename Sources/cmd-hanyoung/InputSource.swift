@@ -78,13 +78,16 @@ enum InputSource {
         return Unmanaged<CFString>.fromOpaque(ptr).takeUnretainedValue() as String
     }
 
-    // MARK: - ID로 TISInputSource 탐색
+    // MARK: - ID로 TISInputSource 클로저 패턴 접근
 
-    /// 입력소스 ID로 TISInputSource를 찾는다.
-    /// enumerate()를 이용해 목록을 순회하므로 별도 리스트 누수 없음.
-    static func find(id: String) -> TISInputSource? {
+    /// 입력소스 ID로 TISInputSource를 찾아 클로저 내에서 사용한다.
+    /// list를 클로저 범위 안에서만 유지함으로써 TISInputSource dangling 위험을 방지한다.
+    /// - Parameters:
+    ///   - id: 탐색할 입력소스 ID
+    ///   - body: 소스를 인자로 받는 클로저 (list 수명 내에서만 호출됨)
+    private static func withInputSource(id: String, _ body: (TISInputSource) -> Void) {
         guard let list = TISCreateInputSourceList(nil, false)?.takeRetainedValue() else {
-            return nil
+            return
         }
         let count = CFArrayGetCount(list)
         for i in 0..<count {
@@ -94,10 +97,10 @@ enum InputSource {
                 let idPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceID),
                 (Unmanaged<CFString>.fromOpaque(idPtr).takeUnretainedValue() as String) == id
             else { continue }
-            // list가 살아있는 동안 source도 유효 — 호출자가 즉시 사용 후 버려야 함
-            return source
+            // list가 살아있는 스코프 안에서 body 호출 — dangling 없음
+            body(source)
+            return
         }
-        return nil
     }
 
     // MARK: - 선택 (idempotent)
@@ -107,11 +110,14 @@ enum InputSource {
         guard InputSourceClassifier.needsSwitch(targetID: id, currentID: currentID()) else {
             return // 이미 현재 소스 — 무동작
         }
-        guard let source = find(id: id) else {
-            NSLog("[cmd-hanyoung] InputSource.select: ID 없음 — %@", id)
-            return
+        var selected = false
+        withInputSource(id: id) { source in
+            TISSelectInputSource(source)
+            selected = true
         }
-        TISSelectInputSource(source)
+        if !selected {
+            NSLog("[cmd-hanyoung] InputSource.select: ID 없음 — %@", id)
+        }
     }
 
     // MARK: - 영문 강제 전환
@@ -129,9 +135,11 @@ enum InputSource {
     /// CJKV 입력소스를 선택한다.
     /// CJKV select 버그(메뉴바 아이콘만 바뀌고 실제 입력 언어 미변경)를 우회한다.
     ///
-    /// - Parameter sourceID: 대상 한글 입력소스 ID (예: "com.apple.inputmethod.Korean.2SetKorean")
-    static func forceKorean(sourceID: String) {
-        selectKoreanWorkaround(sourceID: sourceID)
+    /// - Parameters:
+    ///   - sourceID: 대상 한글 입력소스 ID (예: "com.apple.inputmethod.Korean.2SetKorean")
+    ///   - englishID: bounce 1단계에 사용할 영문 입력소스 ID (예: "com.apple.keylayout.ABC")
+    static func forceKorean(sourceID: String, englishID: String) {
+        selectKoreanWorkaround(targetID: sourceID, englishID: englishID)
     }
 
     // MARK: - CJKV 선택 우회 (bounce 기법)
@@ -144,7 +152,8 @@ enum InputSource {
     ///
     /// 우회 전략 (bounce):
     ///   a. 이미 목표 소스이면 return (idempotent).
-    ///   b. ABC(비-CJKV) 소스로 먼저 전환해 known-base 상태로 정착시킨다.
+    ///   b. 영문(비-CJKV) 소스로 먼저 전환해 known-base 상태로 정착시킨다.
+    ///      englishID 소스가 없으면 bounce 단계를 건너뛰고 직접 선택 시도.
     ///   c. 목표 한글 소스를 TISSelectInputSource로 선택한다.
     ///   d. 다시 한 번 재선택해 compositor 강제 정착("bounce").
     ///
@@ -154,31 +163,36 @@ enum InputSource {
     ///
     /// 향후 개선 여지:
     ///   - Kawa 앱의 '다음 소스' 반복 폴백 기법으로 교체 가능.
-    ///   - 전환 전 현재 소스를 ABC로 정착시키는 단계를 더 강화할 수 있음.
+    ///   - 전환 전 현재 소스를 영문으로 정착시키는 단계를 더 강화할 수 있음.
     ///
-    /// - Parameter sourceID: 전환 목표 CJKV 입력소스 ID
-    private static func selectKoreanWorkaround(sourceID: String) {
+    /// - Parameters:
+    ///   - targetID: 전환 목표 CJKV 입력소스 ID
+    ///   - englishID: bounce 1단계에 사용할 영문 입력소스 ID
+    private static func selectKoreanWorkaround(targetID: String, englishID: String) {
         // a. 이미 목표 소스 — 무동작
-        guard InputSourceClassifier.needsSwitch(targetID: sourceID, currentID: currentID()) else {
+        guard InputSourceClassifier.needsSwitch(targetID: targetID, currentID: currentID()) else {
             return
         }
 
-        // b. ABC(비-CJKV) 소스로 먼저 전환 — known-base 상태로 정착
-        // TODO(S5): 사용자 설정 영문 sourceID로 교체 예정 (지금은 ABC 하드코딩)
-        let abcID = "com.apple.keylayout.ABC"
-        if let abcSource = find(id: abcID) {
+        // b. 영문(비-CJKV) 소스로 먼저 전환 — known-base 상태로 정착
+        //    englishID 소스를 찾지 못하면 bounce 단계 생략하고 직접 선택 시도
+        withInputSource(id: englishID) { abcSource in
             TISSelectInputSource(abcSource)
         }
 
         // c. 목표 한글 소스 선택
-        guard let korSource = find(id: sourceID) else {
-            NSLog("[cmd-hanyoung] InputSource.selectKoreanWorkaround: 한글 소스 ID 없음 — %@", sourceID)
+        var korFound = false
+        withInputSource(id: targetID) { korSource in
+            TISSelectInputSource(korSource)
+            korFound = true
+        }
+        guard korFound else {
+            NSLog("[cmd-hanyoung] InputSource.selectKoreanWorkaround: 한글 소스 ID 없음 — %@", targetID)
             return
         }
-        TISSelectInputSource(korSource)
 
         // d. compositor 강제 정착을 위해 동일 소스 재선택 (bounce)
-        if let korSourceAgain = find(id: sourceID) {
+        withInputSource(id: targetID) { korSourceAgain in
             TISSelectInputSource(korSourceAgain)
         }
     }

@@ -28,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 앱 시작
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 첫 실행 시 기본값 초기화
+        // 첫 실행이거나 저장 ID가 현재 시스템에 없으면 재설정
         initializeDefaultsIfNeeded()
 
         // 상태바 컨트롤러 생성 및 설정
@@ -54,6 +54,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 앱 종료 시 정리
 
     func applicationWillTerminate(_ notification: Notification) {
+        tapMonitor.stop()
+        stopAccessibilityTimer()
         removeWakeObserver()
     }
 
@@ -111,11 +113,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // MARK: - 기본값 초기화
 
-    /// 첫 실행이거나 저장된 ID가 사용 불가 목록이 된 경우 resolveSourceID로 재설정한다.
+    /// 첫 실행이거나 저장된 ID가 현재 시스템의 사용 가능 목록에 없는 경우
+    /// resolveSourceID로 재설정해 무효 ID 잔존을 방지한다.
     private func initializeDefaultsIfNeeded() {
         let availableIDs = InputSource.enumerate().map(\.id)
 
-        if preferenceStore.leftCmdSourceID == nil {
+        let storedLeft = preferenceStore.leftCmdSourceID
+        if storedLeft == nil || !availableIDs.contains(storedLeft!) {
             preferenceStore.leftCmdSourceID = SourceIDResolver.resolveSourceID(
                 stored: nil,
                 available: availableIDs,
@@ -123,7 +127,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             )
         }
 
-        if preferenceStore.rightCmdSourceID == nil {
+        let storedRight = preferenceStore.rightCmdSourceID
+        if storedRight == nil || !availableIDs.contains(storedRight!) {
             preferenceStore.rightCmdSourceID = SourceIDResolver.resolveSourceID(
                 stored: nil,
                 available: availableIDs,
@@ -165,7 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         tapMonitor.onRight = {
             NSLog("[cmd-hanyoung] right tap → force Korean: %@", rightID)
-            InputSource.forceKorean(sourceID: rightID)
+            InputSource.forceKorean(sourceID: rightID, englishID: leftID)
         }
     }
 }
