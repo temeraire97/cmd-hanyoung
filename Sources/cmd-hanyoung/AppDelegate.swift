@@ -1,48 +1,176 @@
-// 앱 델리게이트 — 상태바 아이콘 및 메뉴 구성
+// 앱 델리게이트 — PreferenceStore, StatusBarController, TapMonitor 조율
 import Cocoa
+import ApplicationServices
+import SoloTapDetectorCore
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
 
-    // 상태바 항목 (앱 생명주기 동안 강한 참조 유지)
-    var statusItem: NSStatusItem!
+    // MARK: - 설정 저장소 (앱 생명주기 동안 강한 참조)
+    private let preferenceStore = PreferenceStore()
+
+    // MARK: - 상태바 컨트롤러
+    private var statusBarController: StatusBarController!
+
+    // MARK: - CGEventTap 래퍼 — 솔로탭 감지
+    private let tapMonitor = TapMonitor()
+
+    // MARK: - 접근성 권한 재확인 타이머
+    private var accessibilityTimer: Timer?
+
+    // MARK: - 슬립/웨이크 복구 옵저버
+    private var wakeObserver: NSObjectProtocol?
+
+    // MARK: - 폴백 입력소스 ID 상수
+
+    private static let abcFallback    = "com.apple.keylayout.ABC"
+    private static let koreanFallback = "com.apple.inputmethod.Korean.2SetKorean"
+
+    // MARK: - 앱 시작
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // 시스템 상태바에 가변 길이 항목 생성
-        statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
+        // 첫 실행이거나 저장 ID가 현재 시스템에 없으면 재설정
+        initializeDefaultsIfNeeded()
 
-        // 상태바 버튼 아이콘 설정
-        if let button = statusItem.button {
-            if let globeImage = NSImage(systemSymbolName: "globe", accessibilityDescription: "cmd-hanyoung") {
-                // SF Symbol 사용 가능한 경우 globe 아이콘 설정
-                button.image = globeImage
-            } else {
-                // SF Symbol 사용 불가 시 텍스트 폴백
-                button.title = "⌘한"
-            }
+        // 상태바 컨트롤러 생성 및 설정
+        statusBarController = StatusBarController(preferenceStore: preferenceStore)
+        statusBarController.onLeftCmdSourceChanged = { [weak self] _ in
+            self?.updateTapMonitorCallbacks()
         }
+        statusBarController.onRightCmdSourceChanged = { [weak self] _ in
+            self?.updateTapMonitorCallbacks()
+        }
+        statusBarController.setup()
 
-        // 상태바 메뉴 구성
-        let menu = NSMenu()
+        // TapMonitor 콜백 초기 설정
+        updateTapMonitorCallbacks()
 
-        // 비활성 타이틀 항목 (클릭 불가)
-        let titleItem = NSMenuItem(title: "cmd-hanyoung", action: nil, keyEquivalent: "")
-        titleItem.isEnabled = false
-        menu.addItem(titleItem)
+        // 접근성 권한 확인 후 TapMonitor 시작
+        checkAccessibilityAndStart(promptIfNeeded: true)
 
-        // 구분선
-        menu.addItem(NSMenuItem.separator())
-
-        // 종료 항목 — target을 self로 명시 (상태바 메뉴는 responder chain 보장 안 됨)
-        let quitItem = NSMenuItem(title: "종료", action: #selector(quit), keyEquivalent: "q")
-        quitItem.target = self
-        menu.addItem(quitItem)
-
-        // 메뉴 연결
-        statusItem.menu = menu
+        // 슬립 → 웨이크 시 CGEventTap 복구 (NFR-3)
+        registerWakeObserver()
     }
 
-    // 앱 종료
-    @objc func quit() {
-        NSApplication.shared.terminate(nil)
+    // MARK: - 앱 종료 시 정리
+
+    func applicationWillTerminate(_ notification: Notification) {
+        tapMonitor.stop()
+        stopAccessibilityTimer()
+        removeWakeObserver()
+    }
+
+    // MARK: - 앱 활성화 시 재확인
+
+    func applicationDidBecomeActive(_ notification: Notification) {
+        // 이미 신뢰 상태이면 무동작
+        guard !AXIsProcessTrusted() else { return }
+        checkAccessibilityAndStart(promptIfNeeded: false)
+    }
+
+    // MARK: - 접근성 권한 확인 및 TapMonitor 시작
+
+    /// 접근성 권한을 확인하고, 신뢰 여부에 따라 TapMonitor 시작 및 경고 갱신.
+    /// - Parameter promptIfNeeded: 미신뢰 시 시스템 프롬프트를 표시할지 여부
+    private func checkAccessibilityAndStart(promptIfNeeded: Bool) {
+        let trusted: Bool
+        if promptIfNeeded && !AXIsProcessTrusted() {
+            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
+            trusted = AXIsProcessTrustedWithOptions(options)
+        } else {
+            trusted = AXIsProcessTrusted()
+        }
+
+        statusBarController.updateAccessibilityState(trusted: trusted)
+
+        if trusted {
+            // 권한 확보 — 타이머 중단, TapMonitor 시작(이미 실행 중이면 무동작)
+            stopAccessibilityTimer()
+            tapMonitor.start()
+        } else {
+            // 권한 미확보 — TapMonitor를 시작하지 않고 주기적으로 재확인
+            startAccessibilityTimerIfNeeded()
+        }
+    }
+
+    // MARK: - 접근성 재확인 타이머
+
+    private func startAccessibilityTimerIfNeeded() {
+        guard accessibilityTimer == nil else { return }
+        accessibilityTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self = self else { return }
+            if AXIsProcessTrusted() {
+                self.stopAccessibilityTimer()
+                self.statusBarController.updateAccessibilityState(trusted: true)
+                self.tapMonitor.start()
+            }
+        }
+    }
+
+    private func stopAccessibilityTimer() {
+        accessibilityTimer?.invalidate()
+        accessibilityTimer = nil
+    }
+
+    // MARK: - 기본값 초기화
+
+    /// 첫 실행이거나 저장된 ID가 현재 시스템의 사용 가능 목록에 없는 경우
+    /// resolveSourceID로 재설정해 무효 ID 잔존을 방지한다.
+    private func initializeDefaultsIfNeeded() {
+        let availableIDs = InputSource.enumerate().map(\.id)
+
+        let storedLeft = preferenceStore.leftCmdSourceID
+        if storedLeft == nil || !availableIDs.contains(storedLeft!) {
+            preferenceStore.leftCmdSourceID = SourceIDResolver.resolveSourceID(
+                stored: nil,
+                available: availableIDs,
+                fallback: Self.abcFallback
+            )
+        }
+
+        let storedRight = preferenceStore.rightCmdSourceID
+        if storedRight == nil || !availableIDs.contains(storedRight!) {
+            preferenceStore.rightCmdSourceID = SourceIDResolver.resolveSourceID(
+                stored: nil,
+                available: availableIDs,
+                fallback: Self.koreanFallback
+            )
+        }
+    }
+
+    // MARK: - 슬립/웨이크 복구
+
+    private func registerWakeObserver() {
+        wakeObserver = NSWorkspace.shared.notificationCenter.addObserver(
+            forName: NSWorkspace.didWakeNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self = self else { return }
+            NSLog("[cmd-hanyoung] 시스템 웨이크 감지 — CGEventTap 재시작")
+            self.tapMonitor.restart()
+        }
+    }
+
+    private func removeWakeObserver() {
+        if let observer = wakeObserver {
+            NSWorkspace.shared.notificationCenter.removeObserver(observer)
+            wakeObserver = nil
+        }
+    }
+
+    // MARK: - TapMonitor 콜백 갱신
+
+    private func updateTapMonitorCallbacks() {
+        let leftID  = preferenceStore.leftCmdSourceID  ?? Self.abcFallback
+        let rightID = preferenceStore.rightCmdSourceID ?? Self.koreanFallback
+
+        tapMonitor.onLeft = {
+            NSLog("[cmd-hanyoung] left tap → force English: %@", leftID)
+            InputSource.forceEnglish(sourceID: leftID)
+        }
+        tapMonitor.onRight = {
+            NSLog("[cmd-hanyoung] right tap → force Korean: %@", rightID)
+            InputSource.forceKorean(sourceID: rightID, englishID: leftID)
+        }
     }
 }
