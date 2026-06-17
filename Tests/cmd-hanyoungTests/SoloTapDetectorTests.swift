@@ -93,4 +93,26 @@ import Testing
 
         #expect(result == nil)
     }
+
+    // MARK: - Behavior 7: 연속 두 번 솔로탭 → 각각 .left 반환
+
+    @Test func leftCmd_twoConsecutiveSoloTaps_eachReturnsLeft() {
+        let detector = SoloTapDetector()
+
+        // 첫 번째 탭
+        let down1 = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: true,  timestamp: 0.0)
+        let up1   = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: false, timestamp: 0.1)
+        // 두 번째 탭
+        let down2 = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: true,  timestamp: 0.5)
+        let up2   = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: false, timestamp: 0.6)
+
+        let _ = detector.handle(modifier: down1)
+        let result1 = detector.handle(modifier: up1)
+
+        let _ = detector.handle(modifier: down2)
+        let result2 = detector.handle(modifier: up2)
+
+        #expect(result1 == .left)
+        #expect(result2 == .left)
+    }
 }
