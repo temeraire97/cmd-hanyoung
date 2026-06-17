@@ -61,4 +61,21 @@ import Testing
 
         #expect(result == nil)
     }
+
+    // MARK: - Behavior 5: ⌘ 다운 후 다른 modifier 끼어듦 → nil
+
+    @Test func leftCmd_otherModifierInterrupt_returnsNil() {
+        let detector = SoloTapDetector()
+        // 좌⌘ 누름
+        let cmdDown   = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: true, timestamp: 0.0)
+        // Shift(keyCode 56) 다운 — 다른 modifier 끼어듦
+        let shiftDown = SoloTapDetector.ModifierEvent(keyCode: 56, isDown: true, timestamp: 0.1)
+        let cmdUp     = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: false, timestamp: 0.2)
+
+        let _ = detector.handle(modifier: cmdDown)
+        let _ = detector.handle(modifier: shiftDown)
+        let result = detector.handle(modifier: cmdUp)
+
+        #expect(result == nil)
+    }
 }
