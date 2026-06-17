@@ -14,4 +14,15 @@ import Testing
         )
         #expect(result == "com.apple.keylayout.ABC")
     }
+
+    // MARK: - Behavior 2: stored nil + fallback available에 포함 → fallback 반환
+
+    @Test func storedNil_fallbackInAvailable_returnsFallback() {
+        let result = SourceIDResolver.resolveSourceID(
+            stored: nil,
+            available: ["com.apple.keylayout.ABC", "com.apple.inputmethod.Korean.2SetKorean"],
+            fallback: "com.apple.keylayout.ABC"
+        )
+        #expect(result == "com.apple.keylayout.ABC")
+    }
 }
