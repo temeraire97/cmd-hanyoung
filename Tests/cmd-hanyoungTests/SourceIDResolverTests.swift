@@ -25,4 +25,15 @@ import Testing
         )
         #expect(result == "com.apple.keylayout.ABC")
     }
+
+    // MARK: - Behavior 3: stored가 available에 없음 + fallback available에 포함 → fallback 반환
+
+    @Test func storedNotInAvailable_fallbackInAvailable_returnsFallback() {
+        let result = SourceIDResolver.resolveSourceID(
+            stored: "com.example.nonexistent",
+            available: ["com.apple.keylayout.ABC", "com.apple.inputmethod.Korean.2SetKorean"],
+            fallback: "com.apple.keylayout.ABC"
+        )
+        #expect(result == "com.apple.keylayout.ABC")
+    }
 }
