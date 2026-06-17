@@ -45,6 +45,16 @@ public enum InputSourceClassifier {
         return .other
     }
 
+    // MARK: - 카테고리 술어
+
+    /// 주어진 category가 키보드 입력소스 카테고리인지 판정한다.
+    ///
+    /// - Parameter category: TIS kTISPropertyInputSourceCategory 값 (nil이면 false)
+    /// - Returns: category == categoryKeyboardInputSource 이면 true, 그 외(nil 포함) false
+    public static func isKeyboardCategory(_ category: String?) -> Bool {
+        category == categoryKeyboardInputSource
+    }
+
     // MARK: - idempotency 판정
 
     /// 현재 입력소스가 목표 입력소스와 다른지 판정한다.
