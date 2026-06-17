@@ -36,4 +36,15 @@ import Testing
         )
         #expect(result == "com.apple.keylayout.ABC")
     }
+
+    // MARK: - Behavior 4: stored nil + fallback도 available에 없음 → available 첫 항목 반환
+
+    @Test func storedNil_fallbackNotInAvailable_returnsFirstAvailable() {
+        let result = SourceIDResolver.resolveSourceID(
+            stored: nil,
+            available: ["com.apple.keylayout.US"],
+            fallback: "com.apple.keylayout.ABC"
+        )
+        #expect(result == "com.apple.keylayout.US")
+    }
 }
