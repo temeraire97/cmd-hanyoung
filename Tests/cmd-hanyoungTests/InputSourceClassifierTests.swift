@@ -13,4 +13,14 @@ import Testing
         )
         #expect(result == .english)
     }
+
+    // MARK: - Behavior 2: isASCIICapable == false + keyboard input method category → .cjkv
+
+    @Test func notASCIICapable_keyboardInputMethodCategory_classifiesAsCJKV() {
+        let result = InputSourceClassifier.classify(
+            category: InputSourceClassifier.categoryKeyboardInputSource,
+            isASCIICapable: false
+        )
+        #expect(result == .cjkv)
+    }
 }
