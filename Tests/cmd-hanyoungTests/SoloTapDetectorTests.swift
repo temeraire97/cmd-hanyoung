@@ -78,4 +78,19 @@ import Testing
 
         #expect(result == nil)
     }
+
+    // MARK: - Behavior 6: 임계시간 초과 후 업 → nil(홀드)
+
+    @Test func leftCmd_upAfterThreshold_returnsNil() {
+        // 임계 0.3s 주입
+        let detector = SoloTapDetector(holdThreshold: 0.3)
+        let cmdDown = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: true, timestamp: 0.0)
+        // 0.31s 이후 업 — 임계(0.3s) 초과
+        let cmdUp   = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: false, timestamp: 0.31)
+
+        let _ = detector.handle(modifier: cmdDown)
+        let result = detector.handle(modifier: cmdUp)
+
+        #expect(result == nil)
+    }
 }
