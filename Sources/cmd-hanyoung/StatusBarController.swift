@@ -1,6 +1,7 @@
 // StatusBarController — 메뉴바 아이콘 + 입력소스 선택 메뉴 관리
 // NSStatusItem, NSMenu 소유. AppDelegate가 생성·소유한다.
 import Cocoa
+import ServiceManagement
 import SoloTapDetectorCore
 
 /// 메뉴바 상태 아이콘과 입력소스 선택 메뉴를 담당하는 컨트롤러
@@ -101,6 +102,20 @@ final class StatusBarController {
 
         menu.addItem(NSMenuItem.separator())
 
+        // 로그인 시 자동 실행 토글
+        let loginItem = NSMenuItem(
+            title: "로그인 시 자동 실행",
+            action: #selector(toggleLoginItem),
+            keyEquivalent: ""
+        )
+        loginItem.target = self
+        if #available(macOS 13, *) {
+            loginItem.state = (SMAppService.mainApp.status == .enabled) ? .on : .off
+        }
+        menu.addItem(loginItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // 종료
         let quitItem = NSMenuItem(title: "종료", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
@@ -139,6 +154,22 @@ final class StatusBarController {
         preferenceStore.rightCmdSourceID = sourceID
         onRightCmdSourceChanged?(sourceID)
         refreshMenu()
+    }
+
+    @objc private func toggleLoginItem() {
+        if #available(macOS 13, *) {
+            let service = SMAppService.mainApp
+            do {
+                if service.status == .enabled {
+                    try service.unregister()
+                } else {
+                    try service.register()
+                }
+            } catch {
+                NSLog("[cmd-hanyoung] SMAppService toggle 실패: %@", error.localizedDescription)
+            }
+        }
+        buildMenu()
     }
 
     @objc private func quit() {
