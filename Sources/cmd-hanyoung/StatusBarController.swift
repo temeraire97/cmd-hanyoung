@@ -177,7 +177,7 @@ final class StatusBarController {
     }
 
     @objc private func openAccessibilityPreferences() {
-        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else { return }
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") else { return }
         NSWorkspace.shared.open(url)
     }
 
