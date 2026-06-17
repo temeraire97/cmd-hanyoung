@@ -46,4 +46,19 @@ import Testing
 
         #expect(result == nil)
     }
+
+    // MARK: - Behavior 4: ⌘ 다운 후 마우스다운 → nil
+
+    @Test func leftCmd_mouseDownInterrupt_returnsNil() {
+        let detector = SoloTapDetector()
+        let cmdDown   = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: true, timestamp: 0.0)
+        let mouseDown = SoloTapDetector.OtherInputEvent(timestamp: 0.05)
+        let cmdUp     = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: false, timestamp: 0.1)
+
+        let _ = detector.handle(modifier: cmdDown)
+        detector.handleOtherInput(mouseDown)
+        let result = detector.handle(modifier: cmdUp)
+
+        #expect(result == nil)
+    }
 }
