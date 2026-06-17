@@ -24,6 +24,13 @@ import Testing
         #expect(result == .cjkv)
     }
 
+    // MARK: - Behavior 5: category nil → .other
+
+    @Test func nilCategory_classifiesAsOther() {
+        let result = InputSourceClassifier.classify(category: nil, isASCIICapable: false)
+        #expect(result == .other)
+    }
+
     // MARK: - Behavior 3: needsSwitch — currentID == targetID → false (전환 불필요)
 
     @Test func needsSwitch_sameID_returnsFalse() {
