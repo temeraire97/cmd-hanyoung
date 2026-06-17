@@ -31,4 +31,19 @@ import Testing
 
         #expect(result == .right)
     }
+
+    // MARK: - Behavior 3: ⌘ 다운 후 다른 키 입력 끼어듦 → nil(취소)
+
+    @Test func leftCmd_otherKeyInterrupt_returnsNil() {
+        let detector = SoloTapDetector()
+        let cmdDown = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: true, timestamp: 0.0)
+        let otherInput = SoloTapDetector.OtherInputEvent(timestamp: 0.1)
+        let cmdUp = SoloTapDetector.ModifierEvent(keyCode: 55, isDown: false, timestamp: 0.2)
+
+        let _ = detector.handle(modifier: cmdDown)
+        detector.handleOtherInput(otherInput)
+        let result = detector.handle(modifier: cmdUp)
+
+        #expect(result == nil)
+    }
 }
