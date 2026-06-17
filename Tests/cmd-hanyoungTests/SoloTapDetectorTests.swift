@@ -17,4 +17,18 @@ import Testing
 
         #expect(result == .left)
     }
+
+    // MARK: - Behavior 2: 우⌘ 단독 → .right
+
+    @Test func rightCmd_downThenUpWithinThreshold_returnsRight() {
+        let detector = SoloTapDetector()
+        // 우⌘ keyCode = 54
+        let down = SoloTapDetector.ModifierEvent(keyCode: 54, isDown: true, timestamp: 0.0)
+        let up   = SoloTapDetector.ModifierEvent(keyCode: 54, isDown: false, timestamp: 0.15)
+
+        let _ = detector.handle(modifier: down)
+        let result = detector.handle(modifier: up)
+
+        #expect(result == .right)
+    }
 }
