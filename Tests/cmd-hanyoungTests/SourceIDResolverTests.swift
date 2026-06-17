@@ -47,4 +47,15 @@ import Testing
         )
         #expect(result == "com.apple.keylayout.US")
     }
+
+    // MARK: - Behavior 5: available 비어있음 → nil 반환
+
+    @Test func emptyAvailable_returnsNil() {
+        let result = SourceIDResolver.resolveSourceID(
+            stored: nil,
+            available: [],
+            fallback: "com.apple.keylayout.ABC"
+        )
+        #expect(result == nil)
+    }
 }
