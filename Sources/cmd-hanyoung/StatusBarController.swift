@@ -28,6 +28,10 @@ final class StatusBarController {
 
     private var statusItem: NSStatusItem!
 
+    // MARK: - 접근성 경고 상태
+
+    private var isAccessibilityTrusted: Bool = true
+
     // MARK: - Init
 
     /// - Parameter preferenceStore: 설정 읽기·쓰기에 사용할 저장소
@@ -53,10 +57,31 @@ final class StatusBarController {
         observeTISChanges()
     }
 
+    // MARK: - 접근성 상태 갱신 (공개 API)
+
+    /// 접근성 권한 상태를 갱신하고 메뉴 경고 항목을 표시/숨긴다.
+    /// 재호출 시 idempotent — 중복 항목 추가 없음.
+    func updateAccessibilityState(trusted: Bool) {
+        isAccessibilityTrusted = trusted
+        buildMenu()
+    }
+
     // MARK: - 메뉴 구성
 
     private func buildMenu() {
         let menu = NSMenu()
+
+        // 미신뢰 시 경고 항목을 최상단에 추가
+        if !isAccessibilityTrusted {
+            let warningItem = NSMenuItem(
+                title: "⚠️ 손쉬운 사용 권한 필요 — 클릭하여 설정 열기",
+                action: #selector(openAccessibilityPreferences),
+                keyEquivalent: ""
+            )
+            warningItem.target = self
+            menu.addItem(warningItem)
+            menu.addItem(NSMenuItem.separator())
+        }
 
         // 좌⌘ 서브메뉴
         let leftItem = NSMenuItem(title: "좌⌘ →", action: nil, keyEquivalent: "")
@@ -118,6 +143,11 @@ final class StatusBarController {
 
     @objc private func quit() {
         NSApplication.shared.terminate(nil)
+    }
+
+    @objc private func openAccessibilityPreferences() {
+        guard let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") else { return }
+        NSWorkspace.shared.open(url)
     }
 
     // MARK: - 메뉴 갱신
