@@ -27,7 +27,9 @@ enum InputSource {
 
     /// 시스템에 등록된 모든 입력소스를 열거한다.
     static func enumerate() -> [SourceInfo] {
-        // TISCreateInputSourceList: nil 필터 → 모든 소스, false = 활성 소스만 아님(전체)
+        // TISCreateInputSourceList: nil 필터 → 카테고리 제한 없음
+        // includeAllInstalled=false → 시스템 설정에 추가된(활성화된) 소스만 반환
+        //   (true이면 비활성 설치 소스 포함 전체)
         guard let list = TISCreateInputSourceList(nil, false)?.takeRetainedValue() else {
             return []
         }
@@ -86,6 +88,7 @@ enum InputSource {
     ///   - id: 탐색할 입력소스 ID
     ///   - body: 소스를 인자로 받는 클로저 (list 수명 내에서만 호출됨)
     private static func withInputSource(id: String, _ body: (TISInputSource) -> Void) {
+        // includeAllInstalled=false → 활성화된 소스만 반환 (비활성 포함 전체는 true)
         guard let list = TISCreateInputSourceList(nil, false)?.takeRetainedValue() else {
             return
         }
