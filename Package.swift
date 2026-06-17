@@ -1,4 +1,4 @@
-// swift-tools-version:5.9
+// swift-tools-version:6.0
 // cmd-hanyoung 패키지 정의
 
 import PackageDescription
@@ -30,25 +30,13 @@ let package = Package(
                 .linkedFramework("ApplicationServices"),
             ]
         ),
-        // 테스트 타겟 — Swift Testing 사용
+        // 테스트 타깃 — Swift Testing 사용
+        // CLT 환경에서는 Scripts/test.sh 사용 (Testing.framework 경로 주입)
         .testTarget(
             name: "cmd-hanyoungTests",
             dependencies: ["SoloTapDetectorCore"],
-            path: "Tests/cmd-hanyoungTests",
-            swiftSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
-                ])
-            ],
-            linkerSettings: [
-                .unsafeFlags([
-                    "-F", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks",
-                    "-framework", "Testing",
-                    "-framework", "_Testing_Foundation",
-                    "-Xlinker", "-rpath",
-                    "-Xlinker", "/Library/Developer/CommandLineTools/Library/Developer/Frameworks"
-                ])
-            ]
+            path: "Tests/cmd-hanyoungTests"
         ),
-    ]
+    ],
+    swiftLanguageModes: [.v5]
 )
