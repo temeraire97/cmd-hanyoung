@@ -43,9 +43,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // 메뉴 연결
         statusItem.menu = menu
 
-        // TapMonitor 시작 — 솔로탭 감지 (S2 슬라이스: 로그만, 실제 전환은 S3)
-        tapMonitor.onLeft  = { NSLog("[cmd-hanyoung] left tap → force English (S2 stub)") }
-        tapMonitor.onRight = { NSLog("[cmd-hanyoung] right tap → force Korean (S2 stub)") }
+        // TapMonitor 시작 — 솔로탭 감지 (S3: 실제 입력소스 전환 연결)
+        // TODO(S5): 영문/한글 sourceID는 PreferenceStore에서 사용자 설정으로 교체 예정
+        let englishID = "com.apple.keylayout.ABC"
+        let koreanID  = "com.apple.inputmethod.Korean.2SetKorean"
+
+        tapMonitor.onLeft = {
+            NSLog("[cmd-hanyoung] left tap → force English: %@", englishID)
+            InputSource.forceEnglish(sourceID: englishID)
+        }
+        tapMonitor.onRight = {
+            NSLog("[cmd-hanyoung] right tap → force Korean: %@", koreanID)
+            InputSource.forceKorean(sourceID: koreanID)
+        }
         tapMonitor.start()
     }
 
