@@ -124,10 +124,15 @@ final class StatusBarController {
         statusItem.menu = menu
     }
 
-    /// 입력소스 목록 서브메뉴 생성
+    /// 입력소스 목록 서브메뉴 생성 (선택 가능한 키보드 소스만 표시)
+    /// isSelectCapable=false인 IME 상위 컨테이너(예: com.apple.inputmethod.Korean)를 제외한다.
     private func makeSourceSubmenu(currentID: String?, action: Selector) -> NSMenu {
         let submenu = NSMenu()
         let sources = InputSource.enumerate()
+            .filter { InputSourceClassifier.isSelectableKeyboardSource(
+                isSelectCapable: $0.isSelectCapable,
+                category: $0.category
+            ) }
 
         for source in sources {
             let item = NSMenuItem(title: source.localizedName, action: action, keyEquivalent: "")

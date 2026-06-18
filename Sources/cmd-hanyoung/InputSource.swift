@@ -21,13 +21,18 @@ enum InputSource {
         let localizedName: String
         let isASCIICapable: Bool
         let category: String
+        /// kTISPropertyInputSourceIsSelectCapable — false이면 IME 상위 컨테이너.
+        /// 속성 없으면(nil) true로 처리(안전: 표시 유지).
+        let isSelectCapable: Bool
     }
 
     // MARK: - 열거
 
     /// 시스템에 등록된 모든 입력소스를 열거한다.
     static func enumerate() -> [SourceInfo] {
-        // TISCreateInputSourceList: nil 필터 → 모든 소스, false = 활성 소스만 아님(전체)
+        // TISCreateInputSourceList: nil 필터 → 카테고리 제한 없음
+        // includeAllInstalled=false → 시스템 설정에 추가된(활성화된) 소스만 반환
+        //   (true이면 비활성 설치 소스 포함 전체)
         guard let list = TISCreateInputSourceList(nil, false)?.takeRetainedValue() else {
             return []
         }
@@ -56,11 +61,20 @@ enum InputSource {
                 isASCIICapable = false
             }
 
+            // kTISPropertyInputSourceIsSelectCapable — nil이면 true(안전 기본값: 표시 유지)
+            let isSelectCapable: Bool
+            if let selPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsSelectCapable) {
+                isSelectCapable = CFBooleanGetValue(Unmanaged<CFBoolean>.fromOpaque(selPtr).takeUnretainedValue())
+            } else {
+                isSelectCapable = true
+            }
+
             results.append(SourceInfo(
                 id: id,
                 localizedName: name,
                 isASCIICapable: isASCIICapable,
-                category: category
+                category: category,
+                isSelectCapable: isSelectCapable
             ))
         }
         return results
@@ -86,6 +100,7 @@ enum InputSource {
     ///   - id: 탐색할 입력소스 ID
     ///   - body: 소스를 인자로 받는 클로저 (list 수명 내에서만 호출됨)
     private static func withInputSource(id: String, _ body: (TISInputSource) -> Void) {
+        // includeAllInstalled=false → 활성화된 소스만 반환 (비활성 포함 전체는 true)
         guard let list = TISCreateInputSourceList(nil, false)?.takeRetainedValue() else {
             return
         }
