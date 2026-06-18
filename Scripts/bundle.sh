@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR/.."
 
 echo "==> Release 빌드 시작..."
-swift build -c release
+swift build -c release -Xswiftc -gnone
 
 APP="cmd-hanyoung.app"
 
@@ -24,6 +24,10 @@ mkdir -p "$APP/Contents/Resources"
 # 바이너리 복사
 echo "==> 바이너리 복사..."
 cp ".build/release/cmd-hanyoung" "$APP/Contents/MacOS/cmd-hanyoung"
+
+# 심볼 strip — 반드시 코드 서명 전에 실행해야 함 (strip 이후 서명하면 서명 무효화 방지)
+echo "==> 심볼 strip (빌드 경로 누출 제거)..."
+strip -rSTx "$APP/Contents/MacOS/cmd-hanyoung"
 
 # Info.plist 복사
 echo "==> Info.plist 복사..."
