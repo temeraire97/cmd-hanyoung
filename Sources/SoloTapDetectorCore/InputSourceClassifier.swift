@@ -55,6 +55,25 @@ public enum InputSourceClassifier {
         category == categoryKeyboardInputSource
     }
 
+    // MARK: - 선택 가능한 키보드 소스 술어
+
+    /// 입력소스가 선택 가능한 키보드 소스인지 판정한다.
+    ///
+    /// 한국어 IME 상위 컨테이너(`com.apple.inputmethod.Korean`)는
+    /// `kTISPropertyInputSourceIsSelectCapable == false`이므로 이 술어로 필터된다.
+    /// 속성이 없는 소스(nil → true로 처리)는 표시 유지(안전 기본값).
+    ///
+    /// - Parameters:
+    ///   - isSelectCapable: TIS kTISPropertyInputSourceIsSelectCapable 값 (nil → true 처리 후 전달)
+    ///   - category: TIS kTISPropertyInputSourceCategory 값
+    /// - Returns: isKeyboardCategory(category) && isSelectCapable
+    public static func isSelectableKeyboardSource(
+        isSelectCapable: Bool,
+        category: String?
+    ) -> Bool {
+        isKeyboardCategory(category) && isSelectCapable
+    }
+
     // MARK: - idempotency 판정
 
     /// 현재 입력소스가 목표 입력소스와 다른지 판정한다.
