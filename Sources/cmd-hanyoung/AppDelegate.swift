@@ -115,8 +115,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 첫 실행이거나 저장된 ID가 현재 시스템의 사용 가능 목록에 없는 경우
     /// resolveSourceID로 재설정해 무효 ID 잔존을 방지한다.
+    /// availableIDs는 선택 가능한 키보드 소스만 포함 — 컨테이너 ID가 저장돼 있으면 재설정되도록.
     private func initializeDefaultsIfNeeded() {
-        let availableIDs = InputSource.enumerate().map(\.id)
+        let availableIDs = InputSource.enumerate()
+            .filter { InputSourceClassifier.isSelectableKeyboardSource(
+                isSelectCapable: $0.isSelectCapable,
+                category: $0.category
+            ) }
+            .map(\.id)
 
         let storedLeft = preferenceStore.leftCmdSourceID
         if storedLeft == nil || !availableIDs.contains(storedLeft!) {
