@@ -29,9 +29,19 @@ cp ".build/release/cmd-hanyoung" "$APP/Contents/MacOS/cmd-hanyoung"
 echo "==> Info.plist 복사..."
 cp "Resources/Info.plist" "$APP/Contents/Info.plist"
 
-# Ad-hoc 서명 (안정 식별자 지정 — 접근성 권한 영속 위해)
-echo "==> Ad-hoc 코드 서명..."
-codesign --force --deep --sign - --identifier com.cmdhanyoung.app "$APP"
+# 코드 서명 — self-signed 인증서 우선, 없으면 ad-hoc 폴백
+IDENTITY="${CODESIGN_IDENTITY:-cmd-hanyoung-dev}"
+
+echo "==> 코드 서명..."
+if security find-identity -v -p codesigning | grep -q "$IDENTITY"; then
+    echo "    '$IDENTITY' 인증서로 서명 (권한 영속)"
+    codesign --force --sign "$IDENTITY" --identifier com.cmdhanyoung.app "$APP"
+else
+    echo "⚠️  경고: '$IDENTITY' self-signed 인증서 없음 → ad-hoc 서명 적용."
+    echo "    리빌드마다 '손쉬운 사용' 권한 재허용이 필요합니다."
+    echo "    권한 영속을 원하면: ./Scripts/make-signing-cert.sh 를 1회 실행하세요."
+    codesign --force --sign - --identifier com.cmdhanyoung.app "$APP"
+fi
 
 echo ""
 echo "빌드 완료: $(pwd)/$APP"
