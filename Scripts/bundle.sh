@@ -29,6 +29,14 @@ cp ".build/release/cmd-hanyoung" "$APP/Contents/MacOS/cmd-hanyoung"
 echo "==> Info.plist 복사..."
 cp "Resources/Info.plist" "$APP/Contents/Info.plist"
 
+# 앱 아이콘 복사 (없으면 경고만 출력하고 계속 진행)
+if [ -f Resources/AppIcon.icns ]; then
+    echo "==> AppIcon.icns 복사..."
+    cp "Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+else
+    echo "⚠️  경고: AppIcon.icns 없음 — ./Scripts/make-icon.sh 를 먼저 실행하세요."
+fi
+
 # 코드 서명 — self-signed 인증서 우선, 없으면 ad-hoc 폴백
 IDENTITY="${CODESIGN_IDENTITY:-cmd-hanyoung-dev}"
 
