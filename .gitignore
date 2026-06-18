@@ -3,3 +3,4 @@
 .DS_Store
 Testing.xcframework/
 # Package.resolved는 의도적으로 추적 — 버전 재현성 보장
+graphify-out/
