@@ -82,4 +82,44 @@ import Testing
         let result = InputSourceClassifier.isKeyboardCategory(nil)
         #expect(result == false)
     }
+
+    // MARK: - Behavior 10: isSelectableKeyboardSource — 키보드 + selectable → true
+
+    @Test func isSelectableKeyboardSource_keyboardAndSelectable_returnsTrue() {
+        let result = InputSourceClassifier.isSelectableKeyboardSource(
+            isSelectCapable: true,
+            category: InputSourceClassifier.categoryKeyboardInputSource
+        )
+        #expect(result == true)
+    }
+
+    // MARK: - Behavior 11: isSelectableKeyboardSource — 키보드 + 컨테이너(selectable=false) → false
+
+    @Test func isSelectableKeyboardSource_keyboardContainer_returnsFalse() {
+        let result = InputSourceClassifier.isSelectableKeyboardSource(
+            isSelectCapable: false,
+            category: InputSourceClassifier.categoryKeyboardInputSource
+        )
+        #expect(result == false)
+    }
+
+    // MARK: - Behavior 12: isSelectableKeyboardSource — 팔레트 카테고리 → false
+
+    @Test func isSelectableKeyboardSource_paletteCategory_returnsFalse() {
+        let result = InputSourceClassifier.isSelectableKeyboardSource(
+            isSelectCapable: true,
+            category: "TISCategoryPaletteInputSource"
+        )
+        #expect(result == false)
+    }
+
+    // MARK: - Behavior 13: isSelectableKeyboardSource — nil category → false
+
+    @Test func isSelectableKeyboardSource_nilCategory_returnsFalse() {
+        let result = InputSourceClassifier.isSelectableKeyboardSource(
+            isSelectCapable: true,
+            category: nil
+        )
+        #expect(result == false)
+    }
 }
