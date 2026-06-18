@@ -4,3 +4,6 @@
 Testing.xcframework/
 # Package.resolved는 의도적으로 추적 — 버전 재현성 보장
 graphify-out/
+
+# 아이콘 중간 산출물 — AppIcon.icns는 커밋 대상, 마스터 PNG만 제외
+Resources/icon-master.png
