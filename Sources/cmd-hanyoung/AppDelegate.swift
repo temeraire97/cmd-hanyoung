@@ -28,6 +28,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 앱 시작
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // ── 단일 인스턴스 보장 ──────────────────────────────────────────────
+        // 자신의 bundle ID가 없으면(언번들 swift run 등) 검사 생략
+        if let myBundleID = Bundle.main.bundleIdentifier {
+            let myPID = ProcessInfo.processInfo.processIdentifier
+            let duplicates = NSWorkspace.shared.runningApplications.filter {
+                $0.bundleIdentifier == myBundleID && $0.processIdentifier != myPID
+            }
+            if !duplicates.isEmpty {
+                for app in duplicates {
+                    NSLog("[cmd-hanyoung] 기존 인스턴스 종료 요청 (pid=%d)", app.processIdentifier)
+                    app.terminate()
+                }
+                // 2초 후에도 살아있으면 강제 종료
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    for app in duplicates where app.isTerminated == false {
+                        NSLog("[cmd-hanyoung] 기존 인스턴스 강제 종료 (pid=%d)", app.processIdentifier)
+                        app.forceTerminate()
+                    }
+                }
+            }
+        }
+        // ── 단일 인스턴스 보장 끝 ──────────────────────────────────────────
+
         // 첫 실행이거나 저장 ID가 현재 시스템에 없으면 재설정
         initializeDefaultsIfNeeded()
 
