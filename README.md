@@ -10,9 +10,6 @@ Tap left ⌘ for English, right ⌘ for Korean — instant input-source switchin
 
 </div>
 
-<!-- Record with Kap → Gifski. 5–15 s clip, ~1000 px wide, < 50 MB, keystroke overlay enabled. Drop the output at assets/demo.gif. -->
-![demo](assets/demo.gif)
-
 ---
 
 ## Highlights
