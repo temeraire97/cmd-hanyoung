@@ -29,8 +29,11 @@ Tap left ⌘ for English, right ⌘ for Korean — instant input-source switchin
 
 ```bash
 brew tap temeraire97/tap
+brew trust temeraire97/tap
 brew install --cask cmd-hanyoung
 ```
+
+> `brew trust` is required because Homebrew (2026) blocks casks from third-party taps until trusted.
 
 ### Manual
 

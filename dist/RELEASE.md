@@ -41,7 +41,9 @@
 - [ ] **5. 설치 검증**
 
   ```bash
-  brew tap temeraire97/tap && brew install --cask cmd-hanyoung
+  brew tap temeraire97/tap
+  brew trust temeraire97/tap
+  brew install --cask cmd-hanyoung
   ```
 
   정상 설치 및 Accessibility 권한 부여 후 동작 확인.
