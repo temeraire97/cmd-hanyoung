@@ -10,9 +10,6 @@
 
 </div>
 
-<!-- Kap → Gifski로 녹화. 5–15초, ~1000px 폭, 50MB 미만, 키스트로크 오버레이 ON. 결과물을 assets/demo.gif에 저장. -->
-![demo](assets/demo.gif)
-
 ---
 
 ## 소개
