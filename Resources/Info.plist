@@ -32,5 +32,9 @@
 
     <key>NSHumanReadableCopyright</key>
     <string></string>
+
+    <!-- 앱 아이콘 — AppIcon.icns (확장자 제외) -->
+    <key>CFBundleIconFile</key>
+    <string>AppIcon</string>
 </dict>
 </plist>
