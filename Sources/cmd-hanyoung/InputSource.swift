@@ -21,6 +21,9 @@ enum InputSource {
         let localizedName: String
         let isASCIICapable: Bool
         let category: String
+        /// kTISPropertyInputSourceIsSelectCapable — false이면 IME 상위 컨테이너.
+        /// 속성 없으면(nil) true로 처리(안전: 표시 유지).
+        let isSelectCapable: Bool
     }
 
     // MARK: - 열거
@@ -58,11 +61,20 @@ enum InputSource {
                 isASCIICapable = false
             }
 
+            // kTISPropertyInputSourceIsSelectCapable — nil이면 true(안전 기본값: 표시 유지)
+            let isSelectCapable: Bool
+            if let selPtr = TISGetInputSourceProperty(source, kTISPropertyInputSourceIsSelectCapable) {
+                isSelectCapable = CFBooleanGetValue(Unmanaged<CFBoolean>.fromOpaque(selPtr).takeUnretainedValue())
+            } else {
+                isSelectCapable = true
+            }
+
             results.append(SourceInfo(
                 id: id,
                 localizedName: name,
                 isASCIICapable: isASCIICapable,
-                category: category
+                category: category,
+                isSelectCapable: isSelectCapable
             ))
         }
         return results
