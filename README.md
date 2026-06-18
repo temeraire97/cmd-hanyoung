@@ -42,6 +42,8 @@ macOS TCC는 **designated requirement(csreq)** 기반으로 Accessibility 권한
 
 인증서는 로그인 키체인에 1회만 생성하면 된다. 이후 `./Scripts/bundle.sh`가 자동으로 이 인증서를 감지하여 서명한다.
 
+> **참고:** self-signed 인증서는 키체인에 '신뢰 안 됨'으로 표시될 수 있으나, codesign 서명과 Accessibility 권한 영속(csreq 기반)에는 영향 없다. 최초 1회 codesign 실행 시 키체인 키 접근 허용 여부를 물으면 **"항상 허용"** 을 선택한다.
+
 ### 동작 요약
 
 | 상황 | 서명 방식 | 리빌드 후 권한 |

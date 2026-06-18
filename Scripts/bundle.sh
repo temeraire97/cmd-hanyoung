@@ -33,7 +33,7 @@ cp "Resources/Info.plist" "$APP/Contents/Info.plist"
 IDENTITY="${CODESIGN_IDENTITY:-cmd-hanyoung-dev}"
 
 echo "==> 코드 서명..."
-if security find-identity -v -p codesigning | grep -q "$IDENTITY"; then
+if security find-identity -p codesigning | grep -q "$IDENTITY"; then
     echo "    '$IDENTITY' 인증서로 서명 (권한 영속)"
     codesign --force --sign "$IDENTITY" --identifier com.cmdhanyoung.app "$APP"
 else
