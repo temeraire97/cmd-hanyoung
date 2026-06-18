@@ -28,6 +28,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // MARK: - 앱 시작
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // ── 단일 인스턴스 보장 ──────────────────────────────────────────────
+        // 자신의 bundle ID가 없으면(언번들 swift run 등) 검사 생략
+        if let myBundleID = Bundle.main.bundleIdentifier {
+            let myPID = ProcessInfo.processInfo.processIdentifier
+            let duplicates = NSWorkspace.shared.runningApplications.filter {
+                $0.bundleIdentifier == myBundleID && $0.processIdentifier != myPID
+            }
+            if !duplicates.isEmpty {
+                for app in duplicates {
+                    NSLog("[cmd-hanyoung] 기존 인스턴스 종료 요청 (pid=%d)", app.processIdentifier)
+                    app.terminate()
+                }
+                // 2초 후에도 살아있으면 강제 종료
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    for app in duplicates where app.isTerminated == false {
+                        NSLog("[cmd-hanyoung] 기존 인스턴스 강제 종료 (pid=%d)", app.processIdentifier)
+                        app.forceTerminate()
+                    }
+                }
+            }
+        }
+        // ── 단일 인스턴스 보장 끝 ──────────────────────────────────────────
+
         // 첫 실행이거나 저장 ID가 현재 시스템에 없으면 재설정
         initializeDefaultsIfNeeded()
 
@@ -115,8 +138,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// 첫 실행이거나 저장된 ID가 현재 시스템의 사용 가능 목록에 없는 경우
     /// resolveSourceID로 재설정해 무효 ID 잔존을 방지한다.
+    /// availableIDs는 선택 가능한 키보드 소스만 포함 — 컨테이너 ID가 저장돼 있으면 재설정되도록.
     private func initializeDefaultsIfNeeded() {
-        let availableIDs = InputSource.enumerate().map(\.id)
+        let availableIDs = InputSource.enumerate()
+            .filter { InputSourceClassifier.isSelectableKeyboardSource(
+                isSelectCapable: $0.isSelectCapable,
+                category: $0.category
+            ) }
+            .map(\.id)
 
         let storedLeft = preferenceStore.leftCmdSourceID
         if storedLeft == nil || !availableIDs.contains(storedLeft!) {
