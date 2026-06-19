@@ -197,9 +197,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             NSLog("[cmd-hanyoung] left tap → force English: %@", leftID)
             InputSource.forceEnglish(sourceID: leftID)
         }
-        tapMonitor.onRight = {
+        tapMonitor.onRight = { [weak self] in
             NSLog("[cmd-hanyoung] right tap → force Korean: %@", rightID)
-            InputSource.forceKorean(sourceID: rightID, englishID: leftID)
+            let ok = InputSource.forceKorean(sourceID: rightID, englishID: leftID)
+            self?.statusBarController.updateKoreanSwitchState(succeeded: ok)
         }
     }
 }
