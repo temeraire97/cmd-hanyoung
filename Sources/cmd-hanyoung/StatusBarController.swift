@@ -33,6 +33,10 @@ final class StatusBarController {
 
     private var isAccessibilityTrusted: Bool = true
 
+    // MARK: - 한글 전환 실패 경고 상태
+
+    private var koreanSwitchFailed: Bool = false
+
     // MARK: - Init
 
     /// - Parameter preferenceStore: 설정 읽기·쓰기에 사용할 저장소
@@ -45,17 +49,40 @@ final class StatusBarController {
     func setup() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
-        // 정적 globe 아이콘 (Phase 2에서 동적 A/한 표시 예정)
-        if let button = statusItem.button {
-            if let globeImage = NSImage(systemSymbolName: "globe", accessibilityDescription: "cmd-hanyoung") {
-                button.image = globeImage
-            } else {
-                button.title = "⌘한"
-            }
-        }
-
         buildMenu()
         observeTISChanges()
+
+        // 초기 입력소스 반영 (동적 A/한 표시)
+        updateStatusGlyph()
+    }
+
+    // MARK: - 동적 입력소스 글리프 갱신
+
+    /// 현재 활성 입력소스를 읽어 버튼 타이틀을 "A"(영문) 또는 "한"(CJKV)으로 갱신한다.
+    /// 항상 currentID()를 단일 진실 소스로 사용 — 탭 콜백과 독립적으로 호출 가능.
+    private func updateStatusGlyph() {
+        guard let button = statusItem.button else { return }
+
+        let currentID = InputSource.currentID()
+
+        // 현재 소스 메타데이터를 enumerate()에서 조회해 classify에 필요한 필드 획득
+        let sourceInfo = InputSource.enumerate().first { $0.id == currentID }
+        let kind = InputSourceClassifier.classify(
+            category: sourceInfo?.category,
+            isASCIICapable: sourceInfo?.isASCIICapable ?? true
+        )
+
+        // 이미지 제거 후 텍스트 타이틀 사용 — 시스템 다크모드/Retina 자동 대응
+        button.image = nil
+
+        switch kind {
+        case .english, .other:
+            button.title = "A"
+            button.setAccessibilityLabel("입력 소스: 영어")
+        case .cjkv:
+            button.title = "한"
+            button.setAccessibilityLabel("입력 소스: 한국어")
+        }
     }
 
     // MARK: - 접근성 상태 갱신 (공개 API)
@@ -64,6 +91,15 @@ final class StatusBarController {
     /// 재호출 시 idempotent — 중복 항목 추가 없음.
     func updateAccessibilityState(trusted: Bool) {
         isAccessibilityTrusted = trusted
+        buildMenu()
+    }
+
+    // MARK: - 한글 전환 결과 갱신 (공개 API)
+
+    /// 한글 전환 성공/실패 상태를 갱신하고 메뉴 경고 항목을 표시/숨긴다.
+    /// succeeded=true이면 이전 실패 경고를 지운다.
+    func updateKoreanSwitchState(succeeded: Bool) {
+        koreanSwitchFailed = !succeeded
         buildMenu()
     }
 
@@ -81,6 +117,18 @@ final class StatusBarController {
             )
             warningItem.target = self
             menu.addItem(warningItem)
+            menu.addItem(NSMenuItem.separator())
+        }
+
+        // 한글 전환 실패 시 경고 항목 추가
+        if koreanSwitchFailed {
+            let failItem = NSMenuItem(
+                title: "⚠️ 한글 소스를 찾을 수 없음 — 우⌘ 소스를 다시 선택하세요",
+                action: nil,
+                keyEquivalent: ""
+            )
+            failItem.isEnabled = false
+            menu.addItem(failItem)
             menu.addItem(NSMenuItem.separator())
         }
 
@@ -205,6 +253,7 @@ final class StatusBarController {
     }
 
     @objc private func inputSourceChanged() {
+        updateStatusGlyph()
         refreshMenu()
     }
 
