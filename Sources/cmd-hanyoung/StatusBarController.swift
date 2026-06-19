@@ -141,6 +141,25 @@ final class StatusBarController {
 
         menu.addItem(NSMenuItem.separator())
 
+        // 정보 / GitHub
+        let aboutItem = NSMenuItem(
+            title: "cmd-hanyoung 정보…",
+            action: #selector(showAbout),
+            keyEquivalent: ""
+        )
+        aboutItem.target = self
+        menu.addItem(aboutItem)
+
+        let githubItem = NSMenuItem(
+            title: "GitHub에서 보기",
+            action: #selector(openGitHub),
+            keyEquivalent: ""
+        )
+        githubItem.target = self
+        menu.addItem(githubItem)
+
+        menu.addItem(NSMenuItem.separator())
+
         // 종료
         let quitItem = NSMenuItem(title: "종료", action: #selector(quit), keyEquivalent: "q")
         quitItem.target = self
@@ -208,6 +227,17 @@ final class StatusBarController {
 
     @objc private func openAccessibilityPreferences() {
         guard let url = URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Accessibility") else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    @objc private func showAbout() {
+        // LSUIElement 앱은 활성화 없이 패널을 열면 포커스를 받지 못하므로 먼저 앞으로 가져온다
+        NSApplication.shared.activate(ignoringOtherApps: true)
+        NSApplication.shared.orderFrontStandardAboutPanel(nil)
+    }
+
+    @objc private func openGitHub() {
+        guard let url = URL(string: "https://github.com/temeraire97/cmd-hanyoung") else { return }
         NSWorkspace.shared.open(url)
     }
 
