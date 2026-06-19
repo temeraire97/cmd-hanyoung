@@ -49,40 +49,17 @@ final class StatusBarController {
     func setup() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
+        // 정적 globe 아이콘
+        if let button = statusItem.button {
+            if let globeImage = NSImage(systemSymbolName: "globe", accessibilityDescription: "cmd-hanyoung") {
+                button.image = globeImage
+            } else {
+                button.title = "⌘한"
+            }
+        }
+
         buildMenu()
         observeTISChanges()
-
-        // 초기 입력소스 반영 (동적 A/한 표시)
-        updateStatusGlyph()
-    }
-
-    // MARK: - 동적 입력소스 글리프 갱신
-
-    /// 현재 활성 입력소스를 읽어 버튼 타이틀을 "A"(영문) 또는 "한"(CJKV)으로 갱신한다.
-    /// 항상 currentID()를 단일 진실 소스로 사용 — 탭 콜백과 독립적으로 호출 가능.
-    private func updateStatusGlyph() {
-        guard let button = statusItem.button else { return }
-
-        let currentID = InputSource.currentID()
-
-        // 현재 소스 메타데이터를 enumerate()에서 조회해 classify에 필요한 필드 획득
-        let sourceInfo = InputSource.enumerate().first { $0.id == currentID }
-        let kind = InputSourceClassifier.classify(
-            category: sourceInfo?.category,
-            isASCIICapable: sourceInfo?.isASCIICapable ?? true
-        )
-
-        // 이미지 제거 후 텍스트 타이틀 사용 — 시스템 다크모드/Retina 자동 대응
-        button.image = nil
-
-        switch kind {
-        case .english, .other:
-            button.title = "A"
-            button.setAccessibilityLabel("입력 소스: 영어")
-        case .cjkv:
-            button.title = "한"
-            button.setAccessibilityLabel("입력 소스: 한국어")
-        }
     }
 
     // MARK: - 접근성 상태 갱신 (공개 API)
@@ -253,7 +230,6 @@ final class StatusBarController {
     }
 
     @objc private func inputSourceChanged() {
-        updateStatusGlyph()
         refreshMenu()
     }
 

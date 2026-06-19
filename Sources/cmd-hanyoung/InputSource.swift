@@ -150,69 +150,46 @@ enum InputSource {
     /// CJKV 입력소스를 선택한다.
     /// CJKV select 버그(메뉴바 아이콘만 바뀌고 실제 입력 언어 미변경)를 우회한다.
     ///
-    /// 전략:
-    ///   1. TISSelectInputSource(abc) → TISSelectInputSource(kor) 순서로 known-base 경유 선택.
-    ///   2. CompositorNudge.shared.nudge()로 CJKV compositor 세션 경계를 강제 발생시켜
-    ///      IMKInputController가 한글 모드로 재초기화되도록 한다.
-    ///
-    /// ⚠️ 메인 큐에서만 호출해야 한다 (AppKit 윈도우 조작 포함).
-    ///
     /// - Parameters:
     ///   - sourceID: 대상 한글 입력소스 ID (예: "com.apple.inputmethod.Korean.2SetKorean")
     ///   - englishID: bounce 1단계에 사용할 영문 입력소스 ID (예: "com.apple.keylayout.ABC")
     /// - Returns: true이면 전환 성공(또는 이미 목표 소스), false이면 목표 소스를 찾지 못해 실패.
     @discardableResult
     static func forceKorean(sourceID: String, englishID: String) -> Bool {
-        let switched = selectKoreanWorkaround(targetID: sourceID, englishID: englishID)
-        // switched == nil → 소스 없음(실패)
-        // switched == false → 이미 목표 소스(성공: no-op)
-        // switched == true → 실제 전환 수행(성공: nudge 필요)
-        guard let didSwitch = switched else {
-            return false
-        }
-        if didSwitch {
-            // 실제로 전환이 발생한 경우에만 nudge — 이미 한글이면 compositor는 정상 상태.
-            // nudge()는 비동기(asyncAfter)이므로 이벤트탭 스레드를 블로킹하지 않는다.
-            CompositorNudge.shared.nudge()
-        }
-        return true
+        return selectKoreanWorkaround(targetID: sourceID, englishID: englishID)
     }
 
-    // MARK: - CJKV 선택 우회 (focus-nudge 기법)
+    // MARK: - CJKV 선택 우회 (bounce 기법)
 
     /// CJKV select 버그 우회 구현.
     ///
     /// 배경:
     ///   macOS에서 CJKV IME를 TISSelectInputSource로 직접 선택하면
     ///   메뉴바 아이콘은 바뀌지만 실제 compositor가 전환되지 않는 버그가 있다.
-    ///   macOS Tahoe에서 기존 double-bounce(d 단계 재선택) 기법이 더 이상 신뢰성 없음.
     ///
-    /// 우회 전략 (abc → kor + focus nudge):
-    ///   a. 이미 목표 소스이면 return (idempotent) — nudge도 건너뜀.
+    /// 우회 전략 (bounce):
+    ///   a. 이미 목표 소스이면 return (idempotent).
     ///   b. 영문(비-CJKV) 소스로 먼저 전환해 known-base 상태로 정착시킨다.
     ///      englishID 소스가 없으면 bounce 단계를 건너뛰고 직접 선택 시도.
     ///   c. 목표 한글 소스를 TISSelectInputSource로 선택한다.
-    ///   d. (제거됨) 이전 double-select bounce → CompositorNudge.shared.nudge()로 대체.
-    ///      forceKorean()에서 이 함수 반환 후 nudge()를 호출한다.
+    ///   d. 다시 한 번 재선택해 compositor 강제 정착("bounce").
     ///
     /// 불확실성:
-    ///   - nudge 효과(makeKeyAndOrderFront로 IMKInputController flush)는 HITL 수동 검증 필수.
-    ///   - 실제 착지 여부는 HITL 체크리스트 참고.
+    ///   - 이 기법이 macOS 버전/하드웨어 조합 전체에서 동작하는지 미검증.
+    ///   - 실제 착지 여부는 HITL 수동 검증 필수.
     ///
     /// - Parameters:
     ///   - targetID: 전환 목표 CJKV 입력소스 ID
-    ///   - englishID: 1단계에 사용할 영문(비-CJKV) 입력소스 ID
-    /// - Returns: true이면 실제로 입력소스 전환을 수행했음(nudge 필요),
-    ///            false이면 이미 목표 소스(nudge 불필요),
-    ///            nil이면 목표 소스를 찾지 못해 전환 실패.
-    private static func selectKoreanWorkaround(targetID: String, englishID: String) -> Bool? {
-        // a. 이미 목표 소스 — 무동작. compositor는 이미 한글 상태이므로 nudge 불필요.
+    ///   - englishID: bounce 1단계에 사용할 영문 입력소스 ID
+    /// - Returns: true이면 전환 성공(또는 이미 목표 소스), false이면 목표 소스를 찾지 못해 실패.
+    private static func selectKoreanWorkaround(targetID: String, englishID: String) -> Bool {
+        // a. 이미 목표 소스 — 무동작
         guard InputSourceClassifier.needsSwitch(targetID: targetID, currentID: currentID()) else {
-            return false
+            return true
         }
 
         // b. 영문(비-CJKV) 소스로 먼저 전환 — known-base 상태로 정착
-        //    englishID 소스를 찾지 못하면 이 단계 생략하고 직접 선택 시도
+        //    englishID 소스를 찾지 못하면 bounce 단계 생략하고 직접 선택 시도
         withInputSource(id: englishID) { abcSource in
             TISSelectInputSource(abcSource)
         }
@@ -225,11 +202,14 @@ enum InputSource {
         }
         guard korFound else {
             NSLog("[cmd-hanyoung] InputSource.selectKoreanWorkaround: 한글 소스 ID 없음 — %@", targetID)
-            return nil
+            return false
         }
 
-        // d. (제거) 동일 소스 재선택 bounce — CompositorNudge.shared.nudge()로 대체.
-        //    focus nudge가 IMKInputController 세션 경계를 올바르게 발생시키므로 불필요.
+        // d. compositor 강제 정착을 위해 동일 소스 재선택 (bounce)
+        withInputSource(id: targetID) { korSourceAgain in
+            TISSelectInputSource(korSourceAgain)
+        }
+
         return true
     }
 }
