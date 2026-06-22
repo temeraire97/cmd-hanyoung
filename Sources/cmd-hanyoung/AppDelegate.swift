@@ -202,5 +202,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             let ok = InputSource.forceKorean(sourceID: rightID, englishID: leftID)
             self?.statusBarController.updateKoreanSwitchState(succeeded: ok)
         }
+        tapMonitor.onEscape = { [weak self] in
+            guard self?.preferenceStore.escForceEnglishEnabled == true else { return }
+            NSLog("[cmd-hanyoung] ESC → force English: %@", leftID)
+            InputSource.forceEnglish(sourceID: leftID)
+        }
     }
 }

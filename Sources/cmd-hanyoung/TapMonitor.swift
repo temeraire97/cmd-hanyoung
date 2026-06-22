@@ -9,6 +9,8 @@ final class TapMonitor {
 
     var onLeft:  (() -> Void)?
     var onRight: (() -> Void)?
+    /// ESC 키 다운 시 호출
+    var onEscape: (() -> Void)?
 
     // MARK: - 내부
 
@@ -100,7 +102,15 @@ final class TapMonitor {
                 }
             }
 
-        case .keyDown, .leftMouseDown, .rightMouseDown, .otherMouseDown:
+        case .keyDown:
+            let keyCode = UInt16(event.getIntegerValueField(.keyboardEventKeycode))
+            if keyCode == 53 { // ESC
+                DispatchQueue.main.async { [weak self] in self?.onEscape?() }
+            }
+            let evt = SoloTapDetector.OtherInputEvent(timestamp: event.timestamp.toTimeInterval())
+            detector.handleOtherInput(evt)
+
+        case .leftMouseDown, .rightMouseDown, .otherMouseDown:
             // 그 외 입력 → 현재 후보 취소
             let evt = SoloTapDetector.OtherInputEvent(timestamp: event.timestamp.toTimeInterval())
             detector.handleOtherInput(evt)

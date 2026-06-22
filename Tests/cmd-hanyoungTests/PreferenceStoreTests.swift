@@ -64,4 +64,28 @@ final class DictionaryStore: KeyValueStore {
         #expect(store.leftCmdSourceID == "com.apple.keylayout.ABC")
         #expect(store.rightCmdSourceID == "com.apple.inputmethod.Korean.2SetKorean")
     }
+
+    // MARK: - Behavior 10: escForceEnglishEnabled 초기값 false
+
+    @Test func escForceEnglishEnabled_initialValue_isFalse() {
+        let store = PreferenceStore(store: DictionaryStore())
+        #expect(store.escForceEnglishEnabled == false)
+    }
+
+    // MARK: - Behavior 11: escForceEnglishEnabled true 저장/로드 라운드트립
+
+    @Test func escForceEnglishEnabled_storeAndLoad_roundtrips() {
+        let store = PreferenceStore(store: DictionaryStore())
+        store.escForceEnglishEnabled = true
+        #expect(store.escForceEnglishEnabled == true)
+    }
+
+    // MARK: - Behavior 12: escForceEnglishEnabled true 후 false 설정 시 false 복귀
+
+    @Test func escForceEnglishEnabled_setFalse_returnsFalse() {
+        let store = PreferenceStore(store: DictionaryStore())
+        store.escForceEnglishEnabled = true
+        store.escForceEnglishEnabled = false
+        #expect(store.escForceEnglishEnabled == false)
+    }
 }
