@@ -1,5 +1,5 @@
 cask "cmd-hanyoung" do
-  version "0.1.0"
+  version "0.1.2"
   sha256 "REPLACE_WITH_SHA256"  # output of Scripts/release.sh; bump with version
 
   url "https://github.com/temeraire97/cmd-hanyoung/releases/download/v#{version}/cmd-hanyoung-#{version}.zip"

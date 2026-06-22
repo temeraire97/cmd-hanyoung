@@ -18,17 +18,17 @@
   ./Scripts/release.sh
   ```
 
-  출력: `dist/cmd-hanyoung-0.1.0.zip` + sha256 해시. 이 해시를 `Casks/cmd-hanyoung.rb`의 `sha256` 필드에 입력.
+  출력: `dist/cmd-hanyoung-0.1.2.zip` + sha256 해시. 이 해시를 `Casks/cmd-hanyoung.rb`의 `sha256` 필드에 입력.
 
 - [ ] **3. GitHub Release 생성**
 
   ```bash
-  gh release create v0.1.0 dist/cmd-hanyoung-0.1.0.zip \
-    --title "cmd-hanyoung 0.1.0" \
+  gh release create v0.1.2 dist/cmd-hanyoung-0.1.2.zip \
+    --title "cmd-hanyoung 0.1.2" \
     --generate-notes
   ```
 
-  태그: `v0.1.0`, 에셋: `dist/cmd-hanyoung-0.1.0.zip` 첨부.
+  태그: `v0.1.2`, 에셋: `dist/cmd-hanyoung-0.1.2.zip` 첨부.
 
 - [ ] **4. tap repo 생성 및 Cask 파일 배포**
 
@@ -36,7 +36,7 @@
   gh repo create temeraire97/homebrew-tap --public
   ```
 
-  그 후 이 repo의 `Casks/cmd-hanyoung.rb`에 `dist/cmd-hanyoung.rb` 템플릿을 복사하고, 2단계에서 얻은 실제 sha256 값으로 `REPLACE_WITH_SHA256` 교체.
+  그 후 이 repo의 `Casks/cmd-hanyoung.rb`에 `dist/cmd-hanyoung.rb` 템플릿을 복사하고, 2단계에서 얻은 실제 sha256 값으로 `REPLACE_WITH_SHA256` 교체.  
 
 - [ ] **5. 설치 검증**
 

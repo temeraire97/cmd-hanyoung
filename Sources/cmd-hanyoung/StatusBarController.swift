@@ -139,6 +139,16 @@ final class StatusBarController {
         }
         menu.addItem(loginItem)
 
+        // ESC로 영문 강제 전환 토글
+        let escItem = NSMenuItem(
+            title: "ESC로 영문 전환",
+            action: #selector(toggleEscForceEnglish),
+            keyEquivalent: ""
+        )
+        escItem.target = self
+        escItem.state = preferenceStore.escForceEnglishEnabled ? .on : .off
+        menu.addItem(escItem)
+
         menu.addItem(NSMenuItem.separator())
 
         // 정보 / GitHub
@@ -203,6 +213,11 @@ final class StatusBarController {
         preferenceStore.rightCmdSourceID = sourceID
         onRightCmdSourceChanged?(sourceID)
         refreshMenu()
+    }
+
+    @objc private func toggleEscForceEnglish() {
+        preferenceStore.escForceEnglishEnabled.toggle()
+        buildMenu()
     }
 
     @objc private func toggleLoginItem() {

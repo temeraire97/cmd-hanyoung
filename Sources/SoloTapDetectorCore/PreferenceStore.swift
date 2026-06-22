@@ -31,6 +31,7 @@ public final class PreferenceStore {
 
     public static let leftCmdSourceIDKey  = "leftCmdSourceID"
     public static let rightCmdSourceIDKey = "rightCmdSourceID"
+    public static let escForceEnglishEnabledKey = "escForceEnglishEnabled"
 
     // MARK: - 의존성
 
@@ -62,5 +63,13 @@ public final class PreferenceStore {
     public var rightCmdSourceID: String? {
         get { store.string(forKey: Self.rightCmdSourceIDKey) }
         set { store.set(newValue, forKey: Self.rightCmdSourceIDKey) }
+    }
+
+    // MARK: - ESC로 영문 강제 전환 활성화 여부
+
+    /// ESC 키를 누르면 영문 소스로 강제 전환할지 여부 (기본: false)
+    public var escForceEnglishEnabled: Bool {
+        get { store.string(forKey: Self.escForceEnglishEnabledKey) == "true" }
+        set { store.set(newValue ? "true" : "false", forKey: Self.escForceEnglishEnabledKey) }
     }
 }
